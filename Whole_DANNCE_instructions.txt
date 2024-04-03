@@ -1,0 +1,153 @@
+## Estimation mouse bodyparts by DANNCE
+- NOT UPDATED - 
+1. Recording of L-frame and checkerboard
+
+2. Animal behavior recording
+	- Recording at 30fps 2.7K
+3. Cropping and Trimming videos
+	- 2.5Kp
+	- Trimming to light or trigger
+
+* General notes:
+	- videos should be resized using Openshot to 2.5K 30 fps	
+	- Behavior videos save to : D:\_test_label3D\(date)\('animal_ID')\cam(i_cam).mp4
+	- Cam calibration videos, saved to :    - D:\cam_calibration\(date)_calibration\extrinsic\cam(i_cam)_lframe.mp4	 
+						- D:\cam_calibration\(date)_calibration\intrinsic\cam(i_cam)_extrinsic.mp4	 
+	- For the sync it seems that you need to run the synchronization for each animal/session in order to get the right number of frames and so. 
+		Therefore, I recommend to run the sync python script independently (directly on python and not through the main MATLAB pipeline).
+ 
+##### Calibration and Labeling ##### 
+4. Calibration of cameras
+ - For each new experiment where the cameras need to be set up from scratch
+
+lframe:
+
+(6) up
+ |
+ |							if you look from above:
+ |_5__4__3						3__2__1
+	/						|	
+       2 						4
+      /							|
+     1							5
+							|
+						       (6)
+
+* once the calibration is run, you have to check that the *params.mat file (originally in the extrinsic folder) is copyied to (main/path/calibration/)
+Otherwise it's not gonna work.
+
+
+
+5. Label3D
+	- COM labeling: 
+		for each mouse, run labeling of about 70-100 frames
+	- DANNCE labeling:
+		for each mouse, run about 70-100 frames with the skeleton of choice
+		this will generate a label3d_dannce.mat file, that is the necessary one to run the rest (normally, it will ask you where to save it,
+		So far, it does not do it automatically. This needs to be fixed. As of now, DO NOT CLOSE the labelGui and then run labelGui.exportDannce('framesToLabel', framesToLabel))
+	
+##### COM analysis #####
+For each new experiment, a different cropping needs to be established. Do not forget to keep the same values of pixel difference (Width = a-b; same for height)
+Important: those values fo cropping need to be in either the io.yaml or in the com_config AND dannce_config files.
+
+- For each animal the organization of folders should be as:
+	./mouse(n)/[DANNCE, COM, videos, io.yaml, label3d_dannce.mat]
+- For each camera the videos need to be organized as follows:
+	./videos/[Camera1,Camera2,Camera3,...CameraN]
+- For each video folder, name the videos as '0.mp4'.
+	
+* Be aware of changes in the io.yaml file that needs to be produced for each animal.
+	**track changes here**
+	# where the net is for COM: this can be chaged to a new dir
+	com_predict_weights: ./COM/re_train_results/weights.0-0.00001.hdf5 # after re-train
+	# where the net is for DANNCE: this can be chaged to a new dir
+	dannce_predict_model: ./DANNCE/train_results/AVG/weights.682-62.02752.hdf5
+
+	
+* the dannce_mouse_config.yaml file needs to be adjusted.
+	**track changes here**
+	new_channels_out :  11 # needs to be the number of points in your skeleton (this can be set also in the io.yaml)
+	n_views: 6 # the original number of cameras of the network
+	crop_height: [64, 1216]
+	crop_width: [320, 2240]
+	** this is for training:
+	dannce_finetune_weights: D:/Mario/Labels/markerless_mouse_1/DANNCE/weights/ # where the original network is located
+	
+* the com_mouse_config.yaml file needs to be adjusted.
+	**track changes here**
+	downfac: 4  # Degree of downsampling applied to image input. The demo COMfinder was trained
+				# with downfac:2, but when fine-tuning your own COMfinder, we suggest using 
+				# 4, which will greatly increase prediction speed. This of course depends on the
+				# size of your raw images. If they are low resolution to begin with, you won't
+				# need or want to use a large downfac value.
+	
+	crop_height: [64, 1216]
+	crop_width: [320, 2240]
+	max_num_samples: 'max' # max if you want to predict on the whole video
+	com_finetune_weights: ./COM/COM_trained_net/ # Where the trained network is located
+
+
+6. Run com-train, ultizando label3d_com.mat
+	- Eventually, you can also run com-train without label3d_com.mat (willd detect COM by itself)
+		- alternatively, you can just run com predict, if you think that the weights don't need to be adjusted again.
+7. Run com-predict.
+	- Once the com3d0.mat file has been generated, run the matlab script to add the com structure to the label3d_dannce.mat
+
+##### DANNCE analysis #####
+8. Run dannce-train 
+	-> if you think that the weights need to be changed. This could be good in the case if the environment is changed.
+		Otherwise, use the original weights and skip to the next step
+** Attention:  if the net was trained with 6 cams, and if you have less than 6, you will have to duplicate the cameras, by just
+				copying for instance Camera1 and labeling as Camera5, and so on. 
+				Additionally, you have to run step2_update_from_4_to_6_cams.mat to update the label3d_dannce.mat file.
+	-> if you've trained the original network, then save the wights in a particular folder, that can be called afterwards when predicting new animals.
+		otherwise, use the original weightsfor the next step.
+		
+9. Run dannce-predict
+** Attention
+	- Here you will have to adjust in the io.yaml (or config file) where the trained network is. 
+	Afterwards
+	-> This is the final step. It will produce a .mat file with the predicted coordinates for each point of the skeleton. 
+
+DONE
+
+10. Create predictions.mat file to run further analysis smoothly
+usage :
+python path_to_file/makeStructuredDataNoMocap.py path_to_prediction_file path_to_skeleton_file path_to_label3d_file
+example:
+conda activate dannce
+cd C:\Users\Public\Repos\dannce-master
+python dannce/utils/makeStructuredDataNoMocap.py D:/Mario/Labels/mouse2/DANNCE/predict_results/save_data_AVG0.mat T:/Marta/Cam_cal_and_label3D_Nevian/Label3D/skeletons/rat16.mat D:/Mario/Labels/mouse2/Label3D_dannce.mat
+python dannce/utils/makeStructuredDataNoMocap.py T:\Marta\test_Formalin\dannce\040822\MF_1epi\DANNCE\predict_results\save_data_AVG0.mat T:/Marta/Cam_cal_and_label3D_Nevian/Label3D/skeletons/rat16.mat T:\Marta\test_Formalin\dannce\040822\MF_1epi\Label3D_dannce.mat
+
+########################### for COM and DANNCE ##################################
+############################### notes ##########################################
+Check that the net_type is the same as the weights, i.e., if the net_type is 'AVG', take a network like:weights.rat.AVG.6cam
+Also, if the network is trained with 6 cameras, and our data is from 4 cameras, we don't have to change the n_views to 4; leave it to 6.
+Only change it when we train a network from scratch. (it asks you to duplicate views)
+"The length of the camnames list must divide evenly into 6. 
+Duplicate a subset of the views starting from the first camera (y/n)?"
+- Remember to crop the videos as there are already in the config file
+So far, the whole thing run just as fine. So use the same conditions and cropping parameters
+
+################################ Conda ##########################################
+# Activate conda
+conda activate dannce
+# cd to where the labels and the experiment config files are
+cd /d D:\Mario\Labels\markerless_mouse_1
+# Run COM training 
+# (Here you have to copy the weight folder from the example to the COM folder)
+com-train C:\Users\Public\Repos\dannce-master\configs\com_mouse_config.yaml
+# Run COM predictions
+com-predict C:\Users\Public\Repos\dannce-master\configs\com_mouse_config.yaml
+# now copy the com file into the label3D_dannce.mat file, using 'save_com_in_label3D.mat'
+
+### DANNCE ###
+# Once the COM is found, the main DANNCE network can be trained:
+# (same here, copy the weights)
+# Next, be sure that you are running the same net where the weights are intented to (AVG vs MAX), and set the n_views to 6(original net))
+dannce-train C:\Users\Public\Repos\dannce-master\configs\dannce_mouse_config.yaml
+# After Training run:
+# here, you have to manually add the remaining cameras (if you have less than 6 cams) using the matlab script
+'step2_update_from_4_to_6_cams.mat', then run:
+dannce-predict C:\Users\Public\Repos\dannce-master\configs\dannce_mouse_config.yaml
