@@ -136,7 +136,7 @@ if __name__ == "__main__":
 
     else:
         run( # vidpath=r'H:\DANNCE\6cam_behavior\PFA\336\trimmed_vids', #'D:\\_test_label3D\\220414\\mouse1',
-            vidpath = r'D:\DANNCE\test_2_100_fps_25cm_glass_5min',
+            vidpath = r'D:\DANNCE\AK_665\1\videos',
             fps=100,
             num_landmarks= 22
             )

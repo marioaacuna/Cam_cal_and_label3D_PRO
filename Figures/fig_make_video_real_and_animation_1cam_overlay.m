@@ -15,8 +15,8 @@ clc
 close all
 debug = 0;
 first_frame = 1;
-end_frame = 5000;
-output_video_name = 'glass_mk1_mk2_test2_new_AVG_6cam_500frames'; % normally this is the net you trained with
+end_frame = 15000;
+output_video_name = 'AK_552_0'; % normally this is the net you trained with
 
 warning('off')
 if debug
