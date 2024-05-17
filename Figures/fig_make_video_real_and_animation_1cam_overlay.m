@@ -12,11 +12,11 @@
 clear
 global GC
 clc
-close all
+close all force
 debug = 0;
-first_frame = 1;
-end_frame = 15000;
-output_video_name = 'AK_552_0'; % normally this is the net you trained with
+first_frame = 6000;
+end_frame = 9000;
+output_video_name = 'AK_553_0'; % normally this is the net you trained with
 
 warning('off')
 if debug

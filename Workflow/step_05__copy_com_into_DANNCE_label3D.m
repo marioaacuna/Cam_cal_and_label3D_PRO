@@ -1,9 +1,12 @@
 %%
 clear
 % animal_ID= 'MF_2epi';
-com_filedir = uigetdir('H:\DANNCE', 'COM predictions dir');
+com_filedir = uigetdir('D:\DANNCE', 'COM predictions dir');
 
-[fname, fpath] =  uigetfile('*.mat', 'Label3D_dannce.mat FILE!');
+% get dir from 2 folders upstream
+project_folder = fullfile(fileparts(fileparts(com_filedir)));
+
+[fname, fpath] =  uigetfile([project_folder,'\*.mat'],'MATLAB Files');
 dannce_filepath = fullfile(fpath, fname);
 
 

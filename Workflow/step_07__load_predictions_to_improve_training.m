@@ -29,6 +29,12 @@
 %     4. cameraPoses - Camera position and orientation data
 %     5. data_3D - 3D coordinates of body parts per selected frame
 %     6. camParams - Camera parameters including intrinsic and extrinsic properties
+%     7. videos - Video frames corresponding to the selected frames for labeling
+%
+% Required files:
+%   prediction_folder/save_data_AVG0.mat - File containing 'pred', 'p_max', 'metadata'
+%   Data/20240406_232541_Label3D.mat - Template file with 'imageSize', 'cameraPoses', 'camParams'
+%   ./Label3D/skeletons/Label3D/skeletons/mouse22.mat - Skeleton file for the animal model
 %
 % Required files:
 %   prediction_folder/save_data_AVG0.mat - File containing 'pred', 'p_max', 'metadata'
@@ -47,32 +53,65 @@ clc
 close all
 
 % Define animal ID and set up file paths
-animal_ID = 'test_animal_2_glass';
-rootpath_data = fullfile('/Volumes/External/DANNCE_files', animal_ID);
+
+% ask user for rootpath
+rootpath_data =uigetdir('', 'Animal Project Dir');%fullfile(danncePath,date, animal_ID);
+parts = strsplit(rootpath_data, '\');
+animal_ID = parts{end-1};
+session = parts{end};
+% animal_ID = 'AK_552';
+% session = '0';
+%rootpath_data = fullfile('/Volumes/External/DANNCE_files', animal_ID);
+
+%% User Interface for Selection Method
+selectionMethods = {'quantile', 'random'};
+[idx, tf] = listdlg('PromptString', 'Select a frame selection method:',...
+                    'SelectionMode', 'single',...
+                    'ListString', selectionMethods);
+if tf == 0 % User pressed Cancel or closed the dialog box
+    error('User cancelled the operation.');
+end
+selection_method = selectionMethods{idx};
+
+% User Interface for Template File Selection
+template_file = "D:\DANNCE\post_prediction_training\template_Label3D.mat";
+% [templateFileName, templatePath] = uigetfile('*.mat', 'Select the template file:');
+% if isequal(templateFileName, 0) || isequal(templatePath, 0)
+%     error('User cancelled the operation.');
+% else
+%     template_file = fullfile(templatePath, templateFileName);
+% end
+
+% Load the template file data
+load(template_file, 'imageSize', 'cameraPoses', 'camParams'); % Load template file data
+
 prediction_folder = fullfile(rootpath_data, 'DANNCE', 'predict_results');
 data_predicted = fullfile(prediction_folder, 'save_data_AVG0.mat');
-template_file = fullfile('/Users/mario/Library/CloudStorage/OneDrive-UniversitaetBern/Coding_playground/DANNCE_train_after_predictions/', 'Data', '20240406_232541_Label3D.mat');
+%template_file = fullfile('C:\Users\acuna\OneDrive - Universitaet Bern\Coding_playground\DANNCE_train_after_predictions/', 'Data', '20240406_232541_Label3D.mat');
 
 % Load necessary data
 load(data_predicted, 'pred', 'p_max', 'metadata'); % Load predicted data
-load(template_file, 'imageSize', 'cameraPoses', 'camParams'); % Load template file data
+% load(template_file, 'imageSize', 'cameraPoses', 'camParams'); % Load template file data
 
 % Determine the number of frames and body parts from 'pred'
 [n_frames, ~, n_bodyparts] = size(pred);
 
 % User decides the method for frame selection (quantile or random)
-selection_method = 'random'; % Change to 'quantile' as needed
-n_frames_to_label = round(0.1 * n_frames); % 10% of total frames
+%selection_method = 'quantile'; % Change to 'quantile' as needed
 
 if strcmp(selection_method, 'quantile')
     mean_frames = mean(p_max, 2);
-    q_upper = quantile(mean_frames, 0.95);
-    q_lower = quantile(mean_frames, 0.05);
+    q_upper = quantile(mean_frames, 0.998);
+    q_lower = quantile(mean_frames, 0.001);
     framesToLabel = [find(mean_frames > q_upper); find(mean_frames < q_lower)];
-    framesToLabel = sort(framesToLabel);
+    % framesToLabel = sort(framesToLabel);
 else
     framesToLabel = randperm(n_frames, n_frames_to_label);
 end
+% Sort frames
+framesToLabel = sort(framesToLabel);
+n_frames_to_label = length(framesToLabel); % 10% of total frames
+
 
 % load videos
 %% Load the videos into memory
@@ -81,23 +120,37 @@ vidName = '*.mp4';
 vidPaths = collectVideoPaths(fullfile(rootpath_data, 'videos'), vidName);
 videos = cell(length(vidPaths),1);
 parfor nVid = 1:numel(vidPaths)
+    fprintf('Doing video %s \n', num2str(nVid))
     videos{nVid} = readFrames(vidPaths{nVid}, framesToLabel); % Load
 end
 
+% Save videos
+% save videos in the correct folder 
+target_folder = fullfile('D:\DANNCE\post_prediction_training', animal_ID, session);
+labeled_frames_folder = fullfile(target_folder,'Labeled_frames');
+
+if ~exist("labeled_frames_folder", "dir"); mkdir(labeled_frames_folder);end
+videos_filename = fullfile(labeled_frames_folder, 'videos.mat');
+save(videos_filename, 'videos', '-v7.3')
+
 % Save 'frames_to_label' variable in the animal root path
-save(fullfile(rootpath_data, 'frames_to_label.mat'), 'framesToLabel');
+save(fullfile(labeled_frames_folder, 'frames_to_label.mat'), 'framesToLabel');
 
 % Load skeleton from a fixed location
 % load('Label3D/skeletons/mouse22.mat', 'skeleton');
 skeleton = load('mouse22.mat');
 
 % Create status matrix filled with ones
-n_cams  =size(imageSize,1);
-status = ones(n_bodyparts, n_cams, n_frames); % Assuming n_cams = 1 for simplicity
+n_cams  = size(imageSize,1);
+status = 2*ones(n_bodyparts, n_cams, n_frames_to_label); % Assuming n_cams = 1 for simplicity
 
 % Reformat pred data to data_3D
-data_3D = reshape(permute(pred(framesToLabel, :, :), [1, 3, 2]), [], n_bodyparts * 3);
+% data_3D = reshape(permute(pred(framesToLabel, :, :), [1, 3, 2]), [], n_bodyparts * 3);
+data_3D = reshape(permute(pred(framesToLabel, :, :), [1, 2, 3]), [], n_bodyparts * 3);
+% data_3D(end+1,:) = NaN(1, size(data_3D,2));
 
+save_folder = fullfile('D:\DANNCE\post_prediction_training','temp_files_created');
 % Create the temporary labeling file
-temp_label_file = fullfile(rootpath_data, sprintf('temp_%sLabel3D.mat', animal_ID));
-save(temp_label_file, 'status', 'skeleton', 'imageSize', 'cameraPoses', 'data_3D', 'camParams');
+temp_label_file = fullfile(save_folder, sprintf('temp_%s_%s_Label3D.mat', animal_ID, session));
+save(temp_label_file, 'status', 'skeleton', 'imageSize', 'cameraPoses', 'data_3D', 'camParams', 'videos', '-v7.3');
+disp('Saved done')
