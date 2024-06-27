@@ -135,8 +135,15 @@ if __name__ == "__main__":
         run(**dict(arg.split('=') for arg in sys.argv[1:]))
 
     else:
+        # ask user to select vidpath using a dialog box
+        from tkinter import Tk
+        from tkinter.filedialog import askdirectory
+        Tk().withdraw()
+        vidpath = askdirectory()
+        #vidpath = r'D:\DANNCE\ACC_miniscope\ID_1022\0\videos'
+        
         run( # vidpath=r'H:\DANNCE\6cam_behavior\PFA\336\trimmed_vids', #'D:\\_test_label3D\\220414\\mouse1',
-            vidpath = r'D:\DANNCE\AK_665\1\videos',
+            vidpath = vidpath,
             fps=100,
             num_landmarks= 22
             )

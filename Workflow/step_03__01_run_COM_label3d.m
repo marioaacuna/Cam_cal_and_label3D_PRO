@@ -91,9 +91,9 @@ else
     if ~run_label
         framesToLabel = 1:100;
     else
-        framesToLabel = randperm(n_frames, 200);
-%         framesToLabel=linspace(1,n_frames, 200);
-%         framesToLabel = sort(framesToLabel);
+        % framesToLabel = randperm(n_frames, 200);
+        framesToLabel = randperm(2000, 200);
+        framesToLabel = sort(framesToLabel);
     end
     create_frames = 1;
 end
@@ -112,7 +112,7 @@ if any(exist(videos_filename, "file"))
 else
 
     fprintf('Wait a sec, loading videos \n')
-    parfor nVid = 1:numel(vidPaths)
+    for nVid = 1:numel(vidPaths)
         disp(['vid ', num2str(nVid)])
         frameInds = sync{nVid}.data_frame(framesToLabel);
         videos{nVid} = readFrames(vidPaths{nVid} , frameInds+1);

@@ -16,7 +16,7 @@ close all force
 debug = 0;
 first_frame = 6000;
 end_frame = 9000;
-output_video_name = 'AK_553_0'; % normally this is the net you trained with
+output_video_name = 'ID_1037_0_new_net'; % normally this is the net you trained with
 
 warning('off')
 if debug
