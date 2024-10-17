@@ -14,9 +14,9 @@ global GC
 clc
 close all force
 debug = 0;
-first_frame = 6000;
-end_frame = 9000;
-output_video_name = 'ID_1037_0_new_net'; % normally this is the net you trained with
+first_frame = 1000;
+end_frame = 2000;
+output_video_name = '_continued_fullmodel'; % normally this is the net you trained with
 
 warning('off')
 if debug

@@ -60,8 +60,8 @@ if __name__ == "__main__":
         
     Tk().withdraw()
     # set config path inside dannce path
-    config_path = os.path.join(dannce_path, "configs\dannce_mouse_config.yaml")
-    #config_path = r"C:\Users\acuna\Repositories\dannce-release_development\configs\dannce_mouse_config.yaml"
+    #config_path = os.path.join(dannce_path, "configs\dannce_mouse_config.yaml")
+    config_path = r"D:\DANNCE\DANNCE_TRAINING_3\configs\dannce_rig_dannce_config.yaml"
     
     project_path = os.path.join(askdirectory(title="Select Project Path")) # show an "Open" dialog box and return the path to the selected folder
 
